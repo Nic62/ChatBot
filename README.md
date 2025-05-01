@@ -18,3 +18,5 @@
 
 - NLTK: Biblioteca de processamento de linguagem natural utilizada para o download de recursos adicionais como stopwords e punkt.
 - Random: Biblioteca que permite a manipulação de aleatoriedade.
+  # Link
+  - Para mais,acesse este projeto através de : https://chatbot-unoparzinho.streamlit.app/
