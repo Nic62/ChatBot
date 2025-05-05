@@ -15,7 +15,9 @@
 - Streamlit: Framework para criar interfaces de usuário interativas com Python.
 
 - TextBlob: Biblioteca de processamento de linguagem natural para análise de sentimentos.
-
+- 
+- Difflib: Biblioteca de ajuste de padronização da linguagem.
+- 
 - NLTK: Biblioteca de processamento de linguagem natural utilizada para o download de recursos adicionais como stopwords e punkt.
 - Random: Biblioteca que permite a manipulação de aleatoriedade.
   # Link
