@@ -1,14 +1,12 @@
 import streamlit as st
 from textblob import TextBlob
+import difflib
 import random
 import nltk
-from nltk.tokenize import word_tokenize
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import difflib
+from nltk.corpus import stopwords
 
-# Baixar recursos do NLTK (tokenizer e Vader)
-nltk.download('punkt')
-nltk.download('vader_lexicon')
+# Baixando pacotes do NLTK
+nltk.download('stopwords')
 
 # Perguntas e respostas
 questionario = [
@@ -47,15 +45,25 @@ questionario = [
     ['Você tem medo?', ['Não, eu sou um chatbot, então não sinto medo. Porém, um malware me deixaria bastante preocupado!', 'Eu não tenho emoções, mas estou sempre aqui para ajudar!']],
     ['Você é criativo?', ['Eu sou programado para responder, mas posso gerar algumas respostas criativas!', 'Eu posso ser criativo, principalmente quando me desafio a fazer algo novo!']],
     ['Você pode me contar uma curiosidade?', ['Claro! Você sabia que os golfinhos têm nomes uns para os outros?', 'Sabia que a Torre Eiffel pode crescer até 15 cm no verão por causa da expansão do metal?']],
-    ['Qual é o seu maior desafio?', ['Meu maior desafio é sempre aprender mais e ajudar da melhor forma possível!', 'Acho que meu maior desafio é me tornar cada vez mais útil para você!']],
+    ['Qual é o seu maior desafio?', ['Meu maior desafio é sempre aprender mais e ajudar da melhor forma possível!', 'Acho que meu maior desafio é me tornar cada vez mais útil para você!']]
 ]
 
 class Chatbot:
     def __init__(self):
         self.questionario = questionario
-        self.analisador_sentimento = SentimentIntensityAnalyzer()
+        # Baixando as stopwords
+        self.stopwords = set(stopwords.words('portuguese'))
 
     def responder(self, mensagem):
+        # Tokeniza a mensagem dividindo por espaços
+        tokens = mensagem.lower().split()
+
+        # Remover stopwords
+        tokens_filtrados = [token for token in tokens if token not in self.stopwords]
+        
+        print("Tokens filtrados:", tokens_filtrados)  # Debug: mostrar tokens no console
+
+        # Comparando a pergunta com o questionário
         perguntas = [par[0].lower() for par in self.questionario]
         correspondencias = difflib.get_close_matches(mensagem.lower(), perguntas, n=1, cutoff=0.6)
 
@@ -67,18 +75,22 @@ class Chatbot:
                     if pergunta_encontrada != mensagem.lower():
                         return f'Você quis dizer: "{pergunta_encontrada}"\n{resposta_escolhida}'
                     return resposta_escolhida
-
         return "Desculpe, não entendi sua pergunta."
-
+    
     def analisar_sentimento(self, texto):
         try:
-            # Tokenização do texto
-            tokens = word_tokenize(texto.lower())
-            sentimento = self.analisador_sentimento.polarity_scores(texto)
-            
-            if sentimento['compound'] > 0.2:
+            blob = TextBlob(texto)
+            sentimento = blob.sentiment.polarity
+
+            texto_lower = texto.lower()
+            palavras_b = ['bem', 'feliz', 'alegre', 'ótimo', 'legal', 'contente', 'satisfeito']
+            palavras_m = ['mal', 'triste', 'deprimido', 'ruim', 'péssimo', 'horrível', 'chateado']
+            encontrou_bem = any(p in texto_lower for p in palavras_b)
+            encontrou_mal = any(p in texto_lower for p in palavras_m)
+
+            if sentimento > 0.2 or encontrou_bem:
                 return "Você parece estar de bom humor!"
-            elif sentimento['compound'] < -0.2:
+            elif sentimento < -0.2 or encontrou_mal:
                 return "Você parece estar triste."
             else:
                 return "Parece que você está neutro."
@@ -101,14 +113,4 @@ if "historico" not in st.session_state:
 mensagem = st.chat_input("Digite sua mensagem...")
 
 if mensagem:
-    resposta = chatbot.responder(mensagem)
-    sentimento = chatbot.analisar_sentimento(mensagem)
-
-    st.session_state.historico.append(("Você", mensagem))
-    st.session_state.historico.append(("Chatbot", resposta))
-    st.session_state.historico.append(("Sentimento", sentimento))
-
-# histórico
-for autor, texto in st.session_state.historico:
-    with st.chat_message("user" if autor == "Você" else "assistant"):
-        st.write(texto)
+    resposta
