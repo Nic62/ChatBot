@@ -1,13 +1,14 @@
 import streamlit as st
 from textblob import TextBlob
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
+import re
 import random
+import nltk
 
-# Baixar recursos do NLTK
-nltk.download('punkt')
 nltk.download('stopwords')
+
+# Tokenização simples sem NLTK
+def tokenize(texto):
+    return re.findall(r'\b\w+\b', texto.lower())
 
 # Perguntas e respostas
 questionario = [
@@ -54,15 +55,15 @@ class Chatbot:
         self.questionario = questionario
 
     def responder(self, mensagem):
-        tokens_mensagem = set(word_tokenize(mensagem.lower(), language='portuguese'))
+        tokens_mensagem = set(tokenize(mensagem))
 
         melhor_pergunta = None
         melhor_score = 0
 
         for pergunta, respostas in self.questionario:
-            tokens_pergunta = set(word_tokenize(pergunta.lower(), language='portuguese'))
+            tokens_pergunta = set(tokenize(pergunta))
             interseccao = tokens_mensagem & tokens_pergunta
-            score = len(interseccao) / len(tokens_pergunta)
+            score = len(interseccao) / len(tokens_pergunta) if tokens_pergunta else 0
 
             if score > melhor_score:
                 melhor_score = score
@@ -81,7 +82,7 @@ class Chatbot:
             blob = TextBlob(texto)
             sentimento = blob.sentiment.polarity
 
-            tokens = word_tokenize(texto.lower(), language='portuguese')
+            tokens = tokenize(texto)
             palavras_b = ['bem', 'feliz', 'alegre', 'ótimo', 'legal', 'contente', 'satisfeito']
             palavras_m = ['mal', 'triste', 'deprimido', 'ruim', 'péssimo', 'horrível', 'chateado']
 
