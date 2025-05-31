@@ -4,7 +4,7 @@ import re
 import random
 import difflib
 
-# Tokenização simples
+# Tokenização simples sem NLTK
 def tokenize(texto):
     return re.findall(r'\b\w+\b', texto.lower())
 
@@ -111,4 +111,10 @@ if mensagem:
     sentimento = chatbot.analisar_sentimento(mensagem)
 
     st.session_state.historico.append(("Você", mensagem))
-    st.session_state.historico.append(("Chatbot",
+    st.session_state.historico.append(("Chatbot", resposta))
+    st.session_state.historico.append(("Sentimento", sentimento))
+
+# Histórico de conversas
+for autor, texto in st.session_state.historico:
+    with st.chat_message("user" if autor == "Você" else "assistant"):
+        st.write(texto)
