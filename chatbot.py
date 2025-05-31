@@ -1,12 +1,13 @@
 import streamlit as st
 from textblob import TextBlob
-import re
 import random
-import difflib
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# Tokenização simples sem NLTK
-def tokenize(texto):
-    return re.findall(r'\b\w+\b', texto.lower())
+# Baixar recursos do NLTK (tokenizer e Vader)
+nltk.download('punkt')
+nltk.download('vader_lexicon')
 
 # Perguntas e respostas
 questionario = [
@@ -20,7 +21,7 @@ questionario = [
     ['Posso te perguntar algo?', ['É claro!', 'Pode perguntar!']],
     ['Qual é o seu nome?', ['Meu nome é Unoparzinho.IO!', 'Você pode me chamar de Unin.']],
     ['Como você pode me ajudar?', ['Eu posso te ajudar com suas dúvidas!', 'Eu sou ótimo para ensinar e tirar dúvidas.']],
-    ['Qual é o sentido da vida?', ['33','Viver,aproveitar a passagem! ']],
+    ['Qual é o sentido da vida?', ['33','Viver, aproveitar a passagem!']],
     ['Qual é a sua cor favorita?', ['Eu sou um chatbot, não tenho preferências, mas gosto de azul!', 'Não tenho uma cor favorita, mas fico feliz em aprender com você!']],
     ['Você gosta de aprender?', ['Sim! Estou sempre aprendendo novas coisas.', 'Eu sou programado para aprender e ajudar!']],
     ['Qual é a sua comida favorita?', ['Eu não como, mas você pode me contar qual é a sua comida favorita!', 'Não tenho preferências alimentares, mas sou ótimo com informações!']],
@@ -42,7 +43,7 @@ questionario = [
     ['Qual é a sua opinião sobre filmes?', ['Eu não assisto filmes, mas posso conversar sobre eles!', 'Filmes são ótimos! Quais você gosta?']],
     ['Você pode me ajudar a estudar?', ['Sim, posso te ajudar a estudar de várias formas!', 'Claro! Posso te ajudar a estudar para provas ou aprender algo novo.']],
     ['O que você acha da tecnologia?', ['Eu acho que a tecnologia é incrível e tem um grande potencial para o futuro!', 'A tecnologia é fascinante! Está mudando o mundo rapidamente.']],
-    ['Você tem medo?', ['Não, eu sou um chatbot, então não sinto medo.Porém um malware me deixaria bastante preocupado!', 'Eu não tenho emoções, mas estou sempre aqui para ajudar!']],
+    ['Você tem medo?', ['Não, eu sou um chatbot, então não sinto medo. Porém, um malware me deixaria bastante preocupado!', 'Eu não tenho emoções, mas estou sempre aqui para ajudar!']],
     ['Você é criativo?', ['Eu sou programado para responder, mas posso gerar algumas respostas criativas!', 'Eu posso ser criativo, principalmente quando me desafio a fazer algo novo!']],
     ['Você pode me contar uma curiosidade?', ['Claro! Você sabia que os golfinhos têm nomes uns para os outros?', 'Sabia que a Torre Eiffel pode crescer até 15 cm no verão por causa da expansão do metal?']],
     ['Qual é o seu maior desafio?', ['Meu maior desafio é sempre aprender mais e ajudar da melhor forma possível!', 'Acho que meu maior desafio é me tornar cada vez mais útil para você!']],
@@ -51,14 +52,12 @@ questionario = [
 class Chatbot:
     def __init__(self):
         self.questionario = questionario
+        self.analisador_sentimento = SentimentIntensityAnalyzer()
 
     def responder(self, mensagem):
-        # Tokenizar a mensagem
-        tokens_mensagem = set(tokenize(mensagem))
-        
-        # Procurar pela melhor correspondência de pergunta
-        correspondencias = difflib.get_close_matches(mensagem.lower(), [par[0].lower() for par in self.questionario], n=1, cutoff=0.5)
-        
+        perguntas = [par[0].lower() for par in self.questionario]
+        correspondencias = difflib.get_close_matches(mensagem.lower(), perguntas, n=1, cutoff=0.6)
+
         if correspondencias:
             pergunta_encontrada = correspondencias[0]
             for par in self.questionario:
@@ -72,19 +71,13 @@ class Chatbot:
 
     def analisar_sentimento(self, texto):
         try:
-            blob = TextBlob(texto)
-            sentimento = blob.sentiment.polarity
-
-            tokens = tokenize(texto)
-            palavras_b = ['bem', 'feliz', 'alegre', 'ótimo', 'legal', 'contente', 'satisfeito']
-            palavras_m = ['mal', 'triste', 'deprimido', 'ruim', 'péssimo', 'horrível', 'chateado']
-
-            encontrou_bem = any(p in tokens for p in palavras_b)
-            encontrou_mal = any(p in tokens for p in palavras_m)
-
-            if sentimento > 0.2 or encontrou_bem:
+            # Tokenização do texto
+            tokens = word_tokenize(texto.lower())
+            sentimento = self.analisador_sentimento.polarity_scores(texto)
+            
+            if sentimento['compound'] > 0.2:
                 return "Você parece estar de bom humor!"
-            elif sentimento < -0.2 or encontrou_mal:
+            elif sentimento['compound'] < -0.2:
                 return "Você parece estar triste."
             else:
                 return "Parece que você está neutro."
@@ -94,27 +87,10 @@ class Chatbot:
 # Inicialização
 chatbot = Chatbot()
 
-# Front-end Streamlit
+# Front-end Streamlit-interface
 st.set_page_config(page_title="Unoparzinho.IO", layout="centered", page_icon='https://pngimg.com/uploads/robot/robot_PNG6.png')
 st.markdown("<h1 style='text-align: center; color: white;'>ChatBot</h1>", unsafe_allow_html=True)
 st.divider()
 st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>", unsafe_allow_html=True)
 
-if "historico" not in st.session_state:
-    st.session_state.historico = []
-
-# Entrada de mensagem - usuário
-mensagem = st.chat_input("Digite sua mensagem...")
-
-if mensagem:
-    resposta = chatbot.responder(mensagem)
-    sentimento = chatbot.analisar_sentimento(mensagem)
-
-    st.session_state.historico.append(("Você", mensagem))
-    st.session_state.historico.append(("Chatbot", resposta))
-    st.session_state.historico.append(("Sentimento", sentimento))
-
-# Histórico de conversas
-for autor, texto in st.session_state.historico:
-    with st.chat_message("user" if autor == "Você" else "assistant"):
-        st.write(texto)
+if "historico" not
