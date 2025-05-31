@@ -3,9 +3,9 @@ from textblob import TextBlob
 import difflib
 import random
 import nltk
-from nltk.corpus import stopwords
 
-# Baixando pacotes do NLTK
+# Baixar recursos necessários do nltk
+nltk.download('punkt')
 nltk.download('stopwords')
 
 # Perguntas e respostas
@@ -20,7 +20,7 @@ questionario = [
     ['Posso te perguntar algo?', ['É claro!', 'Pode perguntar!']],
     ['Qual é o seu nome?', ['Meu nome é Unoparzinho.IO!', 'Você pode me chamar de Unin.']],
     ['Como você pode me ajudar?', ['Eu posso te ajudar com suas dúvidas!', 'Eu sou ótimo para ensinar e tirar dúvidas.']],
-    ['Qual é o sentido da vida?', ['33','Viver, aproveitar a passagem!']],
+    ['Qual é o sentido da vida?', ['33', 'Viver, aproveitar a passagem!']],
     ['Qual é a sua cor favorita?', ['Eu sou um chatbot, não tenho preferências, mas gosto de azul!', 'Não tenho uma cor favorita, mas fico feliz em aprender com você!']],
     ['Você gosta de aprender?', ['Sim! Estou sempre aprendendo novas coisas.', 'Eu sou programado para aprender e ajudar!']],
     ['Qual é a sua comida favorita?', ['Eu não como, mas você pode me contar qual é a sua comida favorita!', 'Não tenho preferências alimentares, mas sou ótimo com informações!']],
@@ -45,25 +45,15 @@ questionario = [
     ['Você tem medo?', ['Não, eu sou um chatbot, então não sinto medo. Porém, um malware me deixaria bastante preocupado!', 'Eu não tenho emoções, mas estou sempre aqui para ajudar!']],
     ['Você é criativo?', ['Eu sou programado para responder, mas posso gerar algumas respostas criativas!', 'Eu posso ser criativo, principalmente quando me desafio a fazer algo novo!']],
     ['Você pode me contar uma curiosidade?', ['Claro! Você sabia que os golfinhos têm nomes uns para os outros?', 'Sabia que a Torre Eiffel pode crescer até 15 cm no verão por causa da expansão do metal?']],
-    ['Qual é o seu maior desafio?', ['Meu maior desafio é sempre aprender mais e ajudar da melhor forma possível!', 'Acho que meu maior desafio é me tornar cada vez mais útil para você!']]
+    ['Qual é o seu maior desafio?', ['Meu maior desafio é sempre aprender mais e ajudar da melhor forma possível!', 'Acho que meu maior desafio é me tornar cada vez mais útil para você!']],
 ]
 
 class Chatbot:
     def __init__(self):
         self.questionario = questionario
-        # Baixando as stopwords
-        self.stopwords = set(stopwords.words('portuguese'))
+        self.stopwords = set(nltk.corpus.stopwords.words('portuguese'))
 
     def responder(self, mensagem):
-        # Tokeniza a mensagem dividindo por espaços
-        tokens = mensagem.lower().split()
-
-        # Remover stopwords
-        tokens_filtrados = [token for token in tokens if token not in self.stopwords]
-
-        print("Tokens filtrados:", tokens_filtrados)  # Debug: mostrar tokens no console
-
-        # Comparando a pergunta com o questionário
         perguntas = [par[0].lower() for par in self.questionario]
         correspondencias = difflib.get_close_matches(mensagem.lower(), perguntas, n=1, cutoff=0.6)
 
@@ -75,8 +65,9 @@ class Chatbot:
                     if pergunta_encontrada != mensagem.lower():
                         return f'Você quis dizer: "{pergunta_encontrada}"\n{resposta_escolhida}'
                     return resposta_escolhida
+
         return "Desculpe, não entendi sua pergunta."
-    
+
     def analisar_sentimento(self, texto):
         try:
             blob = TextBlob(texto)
@@ -97,6 +88,13 @@ class Chatbot:
         except Exception as e:
             return f"Sentimento não identificado: {e}"
 
+    def tokenizar(self, mensagem):
+        if isinstance(mensagem, str) and mensagem:
+            tokens = mensagem.lower().split()  # Tokeniza a mensagem dividindo por espaços
+            tokens_filtrados = [token for token in tokens if token not in self.stopwords]  # Remover stopwords
+            return tokens, tokens_filtrados
+        return [], []  # Retorna listas vazias se a mensagem não for válida
+
 # Inicialização
 chatbot = Chatbot()
 
@@ -104,7 +102,8 @@ chatbot = Chatbot()
 st.set_page_config(page_title="Unoparzinho.IO", layout="centered", page_icon='https://pngimg.com/uploads/robot/robot_PNG6.png')
 st.markdown("<h1 style='text-align: center; color: white;'>ChatBot</h1>", unsafe_allow_html=True)
 st.divider()
-st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>",
+            unsafe_allow_html=True)
 
 if "historico" not in st.session_state:
     st.session_state.historico = []
@@ -115,21 +114,18 @@ mensagem = st.chat_input("Digite sua mensagem...")
 if mensagem:
     resposta = chatbot.responder(mensagem)
     sentimento = chatbot.analisar_sentimento(mensagem)
+    tokens, tokens_filtrados = chatbot.tokenizar(mensagem)
 
+    # Adicionando histórico
     st.session_state.historico.append(("Você", mensagem))
     st.session_state.historico.append(("Chatbot", resposta))
     st.session_state.historico.append(("Sentimento", sentimento))
 
-# histórico
+    # Exibindo tokens
+    st.write(f"Tokens: {tokens}")
+    st.write(f"Tokens sem stopwords: {tokens_filtrados}")
+
+# Histórico
 for autor, texto in st.session_state.historico:
     with st.chat_message("user" if autor == "Você" else "assistant"):
         st.write(texto)
-# Tokeniza a mensagem dividindo por espaços
-tokens = mensagem.lower().split()
-
-# Remover stopwords
-tokens_filtrados = [token for token in tokens if token not in self.stopwords]
-
-# Exibindo os tokens no Streamlit
-st.write("Tokens:", tokens)
-st.write("Tokens sem stopwords:", tokens_filtrados)
