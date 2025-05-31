@@ -124,3 +124,12 @@ if mensagem:
 for autor, texto in st.session_state.historico:
     with st.chat_message("user" if autor == "Você" else "assistant"):
         st.write(texto)
+# Tokeniza a mensagem dividindo por espaços
+tokens = mensagem.lower().split()
+
+# Remover stopwords
+tokens_filtrados = [token for token in tokens if token not in self.stopwords]
+
+# Exibindo os tokens no Streamlit
+st.write("Tokens:", tokens)
+st.write("Tokens sem stopwords:", tokens_filtrados)
