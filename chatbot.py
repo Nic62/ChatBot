@@ -4,6 +4,7 @@ import random
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import difflib
 
 # Baixar recursos do NLTK (tokenizer e Vader)
 nltk.download('punkt')
@@ -93,4 +94,21 @@ st.markdown("<h1 style='text-align: center; color: white;'>ChatBot</h1>", unsafe
 st.divider()
 st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>", unsafe_allow_html=True)
 
-if "historico" not
+if "historico" not in st.session_state:
+    st.session_state.historico = []
+
+# Entrada de mensagem - usuário
+mensagem = st.chat_input("Digite sua mensagem...")
+
+if mensagem:
+    resposta = chatbot.responder(mensagem)
+    sentimento = chatbot.analisar_sentimento(mensagem)
+
+    st.session_state.historico.append(("Você", mensagem))
+    st.session_state.historico.append(("Chatbot", resposta))
+    st.session_state.historico.append(("Sentimento", sentimento))
+
+# histórico
+for autor, texto in st.session_state.historico:
+    with st.chat_message("user" if autor == "Você" else "assistant"):
+        st.write(texto)
