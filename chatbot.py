@@ -2,11 +2,9 @@ import streamlit as st
 from textblob import TextBlob
 import re
 import random
-import nltk
+import difflib
 
-nltk.download('stopwords')
-
-# Tokenização simples sem NLTK
+# Tokenização simples
 def tokenize(texto):
     return re.findall(r'\b\w+\b', texto.lower())
 
@@ -55,25 +53,20 @@ class Chatbot:
         self.questionario = questionario
 
     def responder(self, mensagem):
+        # Tokenizar a mensagem
         tokens_mensagem = set(tokenize(mensagem))
-
-        melhor_pergunta = None
-        melhor_score = 0
-
-        for pergunta, respostas in self.questionario:
-            tokens_pergunta = set(tokenize(pergunta))
-            interseccao = tokens_mensagem & tokens_pergunta
-            score = len(interseccao) / len(tokens_pergunta) if tokens_pergunta else 0
-
-            if score > melhor_score:
-                melhor_score = score
-                melhor_pergunta = (pergunta, respostas)
-
-        if melhor_score >= 0.5:
-            resposta_escolhida = random.choice(melhor_pergunta[1])
-            if melhor_pergunta[0].lower() != mensagem.lower():
-                return f'Você quis dizer: "{melhor_pergunta[0]}"\n{resposta_escolhida}'
-            return resposta_escolhida
+        
+        # Procurar pela melhor correspondência de pergunta
+        correspondencias = difflib.get_close_matches(mensagem.lower(), [par[0].lower() for par in self.questionario], n=1, cutoff=0.5)
+        
+        if correspondencias:
+            pergunta_encontrada = correspondencias[0]
+            for par in self.questionario:
+                if par[0].lower() == pergunta_encontrada:
+                    resposta_escolhida = random.choice(par[1])
+                    if pergunta_encontrada != mensagem.lower():
+                        return f'Você quis dizer: "{pergunta_encontrada}"\n{resposta_escolhida}'
+                    return resposta_escolhida
 
         return "Desculpe, não entendi sua pergunta."
 
@@ -118,10 +111,4 @@ if mensagem:
     sentimento = chatbot.analisar_sentimento(mensagem)
 
     st.session_state.historico.append(("Você", mensagem))
-    st.session_state.historico.append(("Chatbot", resposta))
-    st.session_state.historico.append(("Sentimento", sentimento))
-
-# Histórico de conversas
-for autor, texto in st.session_state.historico:
-    with st.chat_message("user" if autor == "Você" else "assistant"):
-        st.write(texto)
+    st.session_state.historico.append(("Chatbot",
