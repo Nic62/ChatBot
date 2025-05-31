@@ -1,15 +1,16 @@
 import streamlit as st
 from textblob import TextBlob
-import difflib
-import random
 import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import random
 
-
+# Baixar recursos do NLTK
 nltk.download('punkt')
 nltk.download('stopwords')
 
 # Perguntas e respostas
-questionario=[
+questionario = [
     ['Oi', ['Olá!', 'Olá, como posso ajudar?']],
     ['Tudo bem ?', ['Estou bem, obrigado. E você?', 'Tudo bem!']],
     ['Como você está?', ['Estou bem, obrigado. E você?', 'Tudo bem!']],
@@ -53,49 +54,57 @@ class Chatbot:
         self.questionario = questionario
 
     def responder(self, mensagem):
-        perguntas = [par[0].lower() for par in self.questionario]
-        correspondencias = difflib.get_close_matches(mensagem.lower(), perguntas, n=1, cutoff=0.6)
+        tokens_mensagem = set(word_tokenize(mensagem.lower(), language='portuguese'))
 
-        if correspondencias:
-            pergunta_encontrada = correspondencias[0]
-            for par in self.questionario:
-                if par[0].lower() == pergunta_encontrada:
-                    resposta_escolhida = random.choice(par[1])
-                    if pergunta_encontrada != mensagem.lower():
-                        return f'Você quis dizer: "{pergunta_encontrada}"\n{resposta_escolhida}'
-                    return resposta_escolhida
+        melhor_pergunta = None
+        melhor_score = 0
+
+        for pergunta, respostas in self.questionario:
+            tokens_pergunta = set(word_tokenize(pergunta.lower(), language='portuguese'))
+            interseccao = tokens_mensagem & tokens_pergunta
+            score = len(interseccao) / len(tokens_pergunta)
+
+            if score > melhor_score:
+                melhor_score = score
+                melhor_pergunta = (pergunta, respostas)
+
+        if melhor_score >= 0.5:
+            resposta_escolhida = random.choice(melhor_pergunta[1])
+            if melhor_pergunta[0].lower() != mensagem.lower():
+                return f'Você quis dizer: "{melhor_pergunta[0]}"\n{resposta_escolhida}'
+            return resposta_escolhida
 
         return "Desculpe, não entendi sua pergunta."
+
     def analisar_sentimento(self, texto):
-            try:
-                blob = TextBlob(texto)
-                sentimento = blob.sentiment.polarity
-    
-                texto_lower = texto.lower()
-                palavras_b= ['bem', 'feliz', 'alegre', 'ótimo', 'legal', 'contente', 'satisfeito']
-                palavras_m= ['mal', 'triste', 'deprimido', 'ruim', 'péssimo', 'horrível', 'chateado']
-                encontrou_bem = any(p in texto_lower for p in palavras_b)
-                encontrou_mal = any(p in texto_lower for p in palavras_m)
-                if sentimento > 0.2 or encontrou_bem:
-                    return "Você parece estar de bom humor!"
-                elif sentimento < -0.2 or encontrou_mal:
-                    return "Você parece estar triste."
-                else:
-                    return "Parece que você está neutro."
-            except Exception as e:
-                return f"Sentimento não identificado: {e}"
+        try:
+            blob = TextBlob(texto)
+            sentimento = blob.sentiment.polarity
+
+            tokens = word_tokenize(texto.lower(), language='portuguese')
+            palavras_b = ['bem', 'feliz', 'alegre', 'ótimo', 'legal', 'contente', 'satisfeito']
+            palavras_m = ['mal', 'triste', 'deprimido', 'ruim', 'péssimo', 'horrível', 'chateado']
+
+            encontrou_bem = any(p in tokens for p in palavras_b)
+            encontrou_mal = any(p in tokens for p in palavras_m)
+
+            if sentimento > 0.2 or encontrou_bem:
+                return "Você parece estar de bom humor!"
+            elif sentimento < -0.2 or encontrou_mal:
+                return "Você parece estar triste."
+            else:
+                return "Parece que você está neutro."
+        except Exception as e:
+            return f"Sentimento não identificado: {e}"
 
 # Inicialização
 chatbot = Chatbot()
 
-# Front-end Streamlit-interface
-st.set_page_config(page_title="Unoparzinho.IO", layout="centered",page_icon='https://pngimg.com/uploads/robot/robot_PNG6.png')
+# Front-end Streamlit
+st.set_page_config(page_title="Unoparzinho.IO", layout="centered", page_icon='https://pngimg.com/uploads/robot/robot_PNG6.png')
 st.markdown("<h1 style='text-align: center; color: white;'>ChatBot</h1>", unsafe_allow_html=True)
 st.divider()
-st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>",
-    unsafe_allow_html=True)
-
-
+st.markdown("<div style='text-align: center;'><img src='https://pngimg.com/uploads/robot/robot_PNG6.png' width='300'></div>", unsafe_allow_html=True)
 
 if "historico" not in st.session_state:
     st.session_state.historico = []
@@ -111,7 +120,7 @@ if mensagem:
     st.session_state.historico.append(("Chatbot", resposta))
     st.session_state.historico.append(("Sentimento", sentimento))
 
-# histórico
+# Histórico de conversas
 for autor, texto in st.session_state.historico:
     with st.chat_message("user" if autor == "Você" else "assistant"):
         st.write(texto)
